@@ -9,25 +9,54 @@
   --color-apple-orange: #FF9500;
   --color-apple-red: #FF3B30;
   --color-apple-gray: #8E8E93;
-  --color-apple-bg: #F2F2F7;
+  
+  --color-bg-primary: #F2F2F7;
+  --color-text-primary: #1C1C1E;
+  --color-card-bg: #FFFFFF;
+  --color-card-border: #FFFFFF;
+  --color-blur-bg: rgba(255, 255, 255, 0.8);
 }
 
-body {
-  background-color: var(--color-apple-bg);
-  color: #1C1C1E;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  :root {
+    --bg-primary: #F2F2F7;
+    --text-primary: #1C1C1E;
+    --card-bg: #FFFFFF;
+    --card-border: #FFFFFF;
+    --blur-bg: rgba(255, 255, 255, 0.8);
+    --tab-border: rgba(142, 142, 147, 0.1);
+  }
+
+  .dark {
+    --bg-primary: #000000;
+    --text-primary: #FFFFFF;
+    --card-bg: #1C1C1E;
+    --card-border: #2C2C2E;
+    --blur-bg: rgba(28, 28, 30, 0.8);
+    --tab-border: rgba(255, 255, 255, 0.1);
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
 }
 
 .apple-card {
-  background: white;
+  background: var(--card-bg);
   border-radius: var(--radius-apple);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--card-border);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .apple-blur {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--blur-bg);
+  transition: background-color 0.3s ease;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {

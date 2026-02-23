@@ -13,11 +13,14 @@ import {
   Settings,
   Image as ImageIcon,
   Wand2,
-  Loader2
+  Loader2,
+  Sun,
+  Moon
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Habit, HabitWithStatus, Completion } from "./types";
 import { suggestHabits, getMotivation, editProofImage } from "./services/gemini";
+import { translations, languages } from "./i18n";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -37,8 +40,33 @@ export default function App() {
   const [editingImage, setEditingImage] = useState<{habitId: number, url: string} | null>(null);
   const [editPrompt, setEditPrompt] = useState("");
   const [isEditingImage, setIsEditingImage] = useState(false);
+  const [activeTab, setActiveTab] = useState<'today' | 'stats' | 'settings'>('today');
+  const [lang, setLang] = useState<keyof typeof translations>(() => {
+    const saved = localStorage.getItem('lang');
+    return (saved as any) || 'en';
+  });
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('darkMode') === 'true' || 
+             window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('lang', lang);
+  }, [lang]);
 
   useEffect(() => {
     fetchHabits();
@@ -178,138 +206,269 @@ export default function App() {
     }
   };
 
+  const t = translations[lang];
+
   return (
-    <div className="max-w-md mx-auto min-h-screen p-6 pb-24 font-sans">
+    <div className="max-w-md mx-auto min-h-screen p-6 pb-24 font-sans bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300">
       {/* Header */}
       <header className="flex justify-between items-end mb-8 pt-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">HabitFlow</h1>
-          <p className="text-apple-gray font-medium">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          <h1 className="text-3xl font-bold tracking-tight">
+            {activeTab === 'today' ? 'HabitFlow' : activeTab === 'stats' ? t.stats : t.settings}
+          </h1>
+          <p className="text-[#8E8E93] font-medium">
+            {activeTab === 'today' 
+              ? new Date().toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' })
+              : activeTab === 'stats' ? t.stats_overview : t.appearance}
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="w-10 h-10 bg-apple-blue text-white rounded-full flex items-center justify-center shadow-lg shadow-apple-blue/20 active:scale-95 transition-transform"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex gap-3">
+          {activeTab === 'today' && (
+            <>
+              <button 
+                onClick={() => setDarkMode(!darkMode)}
+                className="w-10 h-10 bg-[var(--card-bg)] text-[var(--text-primary)] rounded-full flex items-center justify-center shadow-lg border border-[var(--card-border)] active:scale-95 transition-all"
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="w-10 h-10 bg-[#007AFF] text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
+              >
+                <Plus size={24} />
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
-      {/* Habits List */}
-      <section className="space-y-4">
-        <h3 className="text-xl font-semibold mb-4 px-1">Your Habits</h3>
-        {habits.length === 0 && !loading && (
-          <div className="apple-card p-8 text-center border-2 border-dashed border-apple-gray/20 bg-transparent">
-            <p className="text-apple-gray font-medium">No habits yet. Start by adding one or let AI help you!</p>
-          </div>
-        )}
-        
-        {habits.map((habit) => (
-          <motion.div 
-            layout
-            key={habit.id}
-            className="apple-card p-4 flex items-center gap-4 group"
+      <AnimatePresence mode="wait">
+        {activeTab === 'today' && (
+          <motion.div
+            key="today"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
           >
-            <button 
-              onClick={() => toggleHabit(habit.id)}
-              className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 text-2xl",
-                habit.completedToday 
-                  ? "bg-[#34C759] text-white shadow-lg shadow-green-500/20 scale-105" 
-                  : "bg-[#F2F2F7] grayscale opacity-70"
+            {/* Habits List */}
+            <section className="space-y-4">
+              <h3 className="text-xl font-semibold mb-4 px-1">{t.habits}</h3>
+              {habits.length === 0 && !loading && (
+                <div className="apple-card p-8 text-center border-2 border-dashed border-apple-gray/20 bg-transparent">
+                  <p className="text-apple-gray font-medium">{t.no_habits}</p>
+                  <p className="text-xs text-apple-gray/60 mt-1">{t.no_habits_desc}</p>
+                </div>
               )}
-            >
-              {habit.completedToday ? <Check size={24} strokeWidth={3} /> : habit.emoji || "✨"}
-            </button>
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                {!habit.completedToday && <span className="text-lg">{habit.emoji}</span>}
-                <h4 className={cn("font-bold text-[#1C1C1E] transition-all", habit.completedToday && "text-[#8E8E93] line-through opacity-50")}>
-                  {habit.name}
-                </h4>
-              </div>
-              <p className="text-[10px] text-[#8E8E93] font-bold uppercase tracking-widest mt-0.5">Daily Streak: 1</p>
-            </div>
+              
+              {habits.map((habit) => (
+                <motion.div 
+                  layout
+                  key={habit.id}
+                  className="apple-card p-4 flex items-center gap-4 group bg-[var(--card-bg)] border-[var(--card-border)]"
+                >
+                  <button 
+                    onClick={() => toggleHabit(habit.id)}
+                    className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 text-2xl",
+                      habit.completedToday 
+                        ? "bg-[#34C759] text-white shadow-lg shadow-green-500/20 scale-105" 
+                        : "bg-[var(--bg-primary)] grayscale opacity-70"
+                    )}
+                  >
+                    {habit.completedToday ? <Check size={24} strokeWidth={3} /> : habit.emoji || "✨"}
+                  </button>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      {!habit.completedToday && <span className="text-lg">{habit.emoji}</span>}
+                      <h4 className={cn("font-bold text-[var(--text-primary)] transition-all", habit.completedToday && "text-[#8E8E93] line-through opacity-50")}>
+                        {habit.name}
+                      </h4>
+                    </div>
+                    <p className="text-[10px] text-[#8E8E93] font-bold uppercase tracking-widest mt-0.5">{t.streak}: 1</p>
+                  </div>
 
-            <div className="flex items-center gap-2">
-              {habit.proofImageUrl ? (
-                <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-apple-bg">
-                  <img src={habit.proofImageUrl} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
+                    {habit.proofImageUrl ? (
+                      <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-[var(--bg-primary)] shadow-sm">
+                        <img src={habit.proofImageUrl} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => setEditingImage({ habitId: habit.id, url: habit.proofImageUrl! })}
+                            className="text-white p-1.5 bg-white/20 rounded-full backdrop-blur-sm"
+                          >
+                            <Wand2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/*';
+                          input.onchange = (e) => handleImageUpload(e as any, habit.id);
+                          input.click();
+                        }}
+                        className="p-2 text-[#8E8E93] hover:text-[#007AFF] hover:bg-blue-500/10 rounded-full transition-all"
+                      >
+                        <Camera size={20} />
+                      </button>
+                    )}
                     <button 
-                      onClick={() => setEditingImage({ habitId: habit.id, url: habit.proofImageUrl! })}
-                      className="text-white"
+                      onClick={() => deleteHabit(habit.id)}
+                      className="p-2 text-[#8E8E93] hover:text-[#FF3B30] hover:bg-red-500/10 rounded-full transition-all opacity-0 group-hover:opacity-100"
                     >
-                      <Wand2 size={14} />
+                      <Trash2 size={20} />
                     </button>
                   </div>
+                </motion.div>
+              ))}
+            </section>
+
+            {/* AI Section */}
+            <section className="mt-12 mb-8">
+              <div className="flex items-center gap-2 mb-4 px-1">
+                <Sparkles className="text-[#007AFF]" size={20} />
+                <h3 className="text-xl font-bold text-[var(--text-primary)]">{t.ai_architect}</h3>
+              </div>
+              <div className="apple-card p-6 bg-[var(--card-bg)] shadow-xl shadow-blue-500/5 border border-[var(--card-border)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <Wand2 className="text-[#007AFF]" size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--text-primary)]">{t.personalized_routine}</p>
+                    <p className="text-xs text-[#8E8E93]">{t.describe_goals}</p>
+                  </div>
                 </div>
-              ) : (
-                <button 
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => handleImageUpload(e as any, habit.id);
-                    input.click();
-                  }}
-                  className="p-2 text-apple-gray hover:text-apple-blue transition-colors"
-                >
-                  <Camera size={20} />
-                </button>
-              )}
-              <button 
-                onClick={() => deleteHabit(habit.id)}
-                className="p-2 text-apple-gray hover:text-apple-red transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 size={20} />
-              </button>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    placeholder="..."
+                    value={aiGoals}
+                    onChange={(e) => setAiGoals(e.target.value)}
+                    className="w-full bg-[var(--bg-primary)] border-none rounded-2xl px-5 py-4 text-sm font-medium focus:ring-2 focus:ring-[#007AFF] outline-none transition-all placeholder:text-[#8E8E93]/50 text-[var(--text-primary)]"
+                  />
+                  <button 
+                    onClick={handleAiSuggest}
+                    disabled={aiSuggesting || !aiGoals}
+                    className="absolute right-2 top-2 bottom-2 bg-[#007AFF] text-white px-4 rounded-xl active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                  >
+                    {aiSuggesting ? <Loader2 className="animate-spin" size={18} /> : (
+                      <>
+                        <span className="text-xs font-bold uppercase tracking-widest">{t.generate}</span>
+                        <ChevronRight size={16} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </section>
+          </motion.div>
+        )}
+
+        {activeTab === 'stats' && (
+          <motion.div
+            key="stats"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="apple-card p-5 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none">
+                <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">{t.completion_rate}</p>
+                <p className="text-3xl font-bold">84%</p>
+              </div>
+              <div className="apple-card p-5 bg-gradient-to-br from-green-500 to-green-600 text-white border-none">
+                <p className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">{t.best_streak}</p>
+                <p className="text-3xl font-bold">12</p>
+              </div>
+            </div>
+
+            <div className="apple-card p-6">
+              <h4 className="font-bold mb-4">{t.habits_performance}</h4>
+              <div className="space-y-4">
+                {habits.map(h => (
+                  <div key={h.id} className="flex items-center gap-3">
+                    <span className="text-xl">{h.emoji}</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span>{h.name}</span>
+                        <span>75%</span>
+                      </div>
+                      <div className="w-full bg-[var(--bg-primary)] h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-[#007AFF] h-full w-3/4 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
-        ))}
-      </section>
+        )}
 
-      {/* AI Section - Improved Design */}
-      <section className="mt-12 mb-8">
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <Sparkles className="text-[#007AFF]" size={20} />
-          <h3 className="text-xl font-bold text-[#1C1C1E]">AI Habit Architect</h3>
-        </div>
-        <div className="apple-card p-6 bg-white shadow-xl shadow-blue-500/5 border border-blue-100/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
-              <Wand2 className="text-[#007AFF]" size={20} />
+        {activeTab === 'settings' && (
+          <motion.div
+            key="settings"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6"
+          >
+            <div className="apple-card overflow-hidden">
+              <div className="p-4 border-b border-[var(--tab-border)] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-apple-gray/10 rounded-lg flex items-center justify-center">
+                    <Moon size={18} className="text-apple-gray" />
+                  </div>
+                  <span className="font-medium">{t.dark_mode}</span>
+                </div>
+                <button 
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={cn(
+                    "w-12 h-6 rounded-full transition-colors relative",
+                    darkMode ? "bg-apple-green" : "bg-apple-gray/20"
+                  )}
+                >
+                  <motion.div 
+                    animate={{ x: darkMode ? 24 : 2 }}
+                    className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-sm"
+                  />
+                </button>
+              </div>
+
+              <div className="p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-apple-blue/10 rounded-lg flex items-center justify-center">
+                    <ImageIcon size={18} className="text-apple-blue" />
+                  </div>
+                  <span className="font-medium">{t.language}</span>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {languages.map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => setLang(l.code as any)}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-xl transition-all",
+                        lang === l.code ? "bg-apple-blue/10 text-apple-blue font-bold" : "hover:bg-apple-gray/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{l.flag}</span>
+                        <span>{l.name}</span>
+                      </div>
+                      {lang === l.code && <Check size={18} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold text-[#1C1C1E]">Personalized Routine</p>
-              <p className="text-xs text-[#8E8E93]">Describe your goals to get started.</p>
-            </div>
-          </div>
-          <div className="relative">
-            <input 
-              type="text" 
-              placeholder="e.g. 'I want to be more mindful and healthy'"
-              value={aiGoals}
-              onChange={(e) => setAiGoals(e.target.value)}
-              className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 text-sm font-medium focus:ring-2 focus:ring-[#007AFF] outline-none transition-all placeholder:text-[#8E8E93]/50"
-            />
-            <button 
-              onClick={handleAiSuggest}
-              disabled={aiSuggesting || !aiGoals}
-              className="absolute right-2 top-2 bottom-2 bg-[#007AFF] text-white px-4 rounded-xl disabled:opacity-50 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
-            >
-              {aiSuggesting ? <Loader2 className="animate-spin" size={18} /> : (
-                <>
-                  <span className="text-xs font-bold uppercase tracking-widest">Generate</span>
-                  <ChevronRight size={16} />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </section>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Add Habit Modal */}
       <AnimatePresence>
@@ -326,31 +485,31 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="apple-card w-full max-w-sm p-8 relative z-10 bg-white shadow-2xl"
+              className="apple-card w-full max-w-sm p-8 relative z-10 bg-[var(--card-bg)] border-[var(--card-border)] shadow-2xl"
             >
-              <h3 className="text-2xl font-bold mb-6 text-center">New Habit</h3>
+              <h3 className="text-2xl font-bold mb-6 text-center text-[var(--text-primary)]">{t.add_habit}</h3>
               
               <div className="flex flex-col gap-4 mb-8">
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">Habit Name</label>
+                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">{t.habit_name}</label>
                   <input 
                     autoFocus
                     type="text" 
                     placeholder="e.g. Morning Yoga"
                     value={newHabitName}
                     onChange={(e) => setNewHabitName(e.target.value)}
-                    className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] font-medium"
+                    className="w-full bg-[var(--bg-primary)] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] font-medium text-[var(--text-primary)]"
                   />
                 </div>
                 
                 <div>
-                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">Emoji Icon</label>
+                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">{t.emoji_icon}</label>
                   <input 
                     type="text" 
                     placeholder="✨"
                     value={newHabitEmoji}
                     onChange={(e) => setNewHabitEmoji(e.target.value)}
-                    className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] text-2xl text-center"
+                    className="w-full bg-[var(--bg-primary)] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] text-2xl text-center text-[var(--text-primary)]"
                   />
                 </div>
               </div>
@@ -358,16 +517,16 @@ export default function App() {
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-4 font-bold text-[#8E8E93] bg-[#F2F2F7] rounded-2xl active:scale-95 transition-transform"
+                  className="flex-1 py-4 font-bold text-[#8E8E93] bg-[var(--bg-primary)] rounded-2xl active:scale-95 transition-transform"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button 
                   onClick={() => addHabit(newHabitName, newHabitEmoji)}
                   disabled={!newHabitName}
                   className="flex-1 py-4 font-bold text-white bg-[#007AFF] rounded-2xl disabled:opacity-50 shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
                 >
-                  Create
+                  {t.create}
                 </button>
               </div>
             </motion.div>
@@ -389,39 +548,41 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="apple-card w-full max-w-md overflow-hidden relative z-10"
+              className="apple-card w-full max-w-md overflow-hidden relative z-10 bg-[var(--card-bg)] border-[var(--card-border)] shadow-2xl"
             >
-              <div className="relative aspect-square bg-black">
+              <div className="relative aspect-square bg-[#1C1C1E]">
                 <img src={editingImage.url} className="w-full h-full object-contain" />
                 <button 
                   onClick={() => setEditingImage(null)}
-                  className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center"
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
                 >
-                  <X size={20} />
+                  <X size={24} />
                 </button>
               </div>
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Wand2 className="text-apple-blue" size={18} />
-                  <h3 className="font-bold">AI Image Editor</h3>
+              <div className="p-8">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <Wand2 className="text-[#007AFF]" size={20} />
+                  </div>
+                  <h3 className="text-xl font-bold text-[var(--text-primary)]">{t.ai_magic_editor}</h3>
                 </div>
-                <p className="text-sm text-apple-gray mb-4">
-                  Describe how you want to transform this proof. (e.g. "Add a retro filter", "Make it look like a victory poster")
+                <p className="text-sm text-[#8E8E93] mb-6 leading-relaxed">
+                  {t.magic_desc}
                 </p>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    placeholder="Enter prompt..."
+                    placeholder="..."
                     value={editPrompt}
                     onChange={(e) => setEditPrompt(e.target.value)}
-                    className="flex-1 bg-apple-bg border-none rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-apple-blue"
+                    className="flex-1 bg-[var(--bg-primary)] border-none rounded-2xl px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-[#007AFF] transition-all text-[var(--text-primary)]"
                   />
                   <button 
                     onClick={handleEditImage}
                     disabled={isEditingImage || !editPrompt}
-                    className="bg-apple-blue text-white px-4 py-3 rounded-xl disabled:opacity-50"
+                    className="bg-[#007AFF] text-white px-6 py-4 rounded-2xl disabled:opacity-50 font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
                   >
-                    {isEditingImage ? <Loader2 className="animate-spin" size={20} /> : "Apply"}
+                    {isEditingImage ? <Loader2 className="animate-spin" size={20} /> : t.magic}
                   </button>
                 </div>
               </div>
@@ -431,18 +592,27 @@ export default function App() {
       </AnimatePresence>
 
       {/* Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 apple-blur border-t border-[#8E8E93]/10 px-8 pt-4 pb-8 flex justify-around items-center z-40">
-        <button className="text-[#007AFF] flex flex-col items-center gap-1.5">
-          <Calendar size={26} strokeWidth={2.5} />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Today</span>
+      <nav className="fixed bottom-0 left-0 right-0 apple-blur border-t border-[var(--tab-border)] px-8 pt-4 pb-8 flex justify-around items-center z-40">
+        <button 
+          onClick={() => setActiveTab('today')}
+          className={cn("flex flex-col items-center gap-1.5 transition-all", activeTab === 'today' ? "text-[#007AFF]" : "text-[#8E8E93] opacity-60")}
+        >
+          <Calendar size={26} strokeWidth={activeTab === 'today' ? 2.5 : 2} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t.today}</span>
         </button>
-        <button className="text-[#8E8E93] flex flex-col items-center gap-1.5 opacity-60">
-          <TrendingUp size={26} strokeWidth={2} />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Stats</span>
+        <button 
+          onClick={() => setActiveTab('stats')}
+          className={cn("flex flex-col items-center gap-1.5 transition-all", activeTab === 'stats' ? "text-[#007AFF]" : "text-[#8E8E93] opacity-60")}
+        >
+          <TrendingUp size={26} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t.stats}</span>
         </button>
-        <button className="text-[#8E8E93] flex flex-col items-center gap-1.5 opacity-60">
-          <Settings size={26} strokeWidth={2} />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Settings</span>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={cn("flex flex-col items-center gap-1.5 transition-all", activeTab === 'settings' ? "text-[#007AFF]" : "text-[#8E8E93] opacity-60")}
+        >
+          <Settings size={26} strokeWidth={activeTab === 'settings' ? 2.5 : 2} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t.settings}</span>
         </button>
       </nav>
     </div>
