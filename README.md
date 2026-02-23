@@ -1,81 +1,70 @@
-<div align="center">
-  <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+<!-- Banner -->
+![Header: HabitFlow](https://capsule-render.vercel.app/api?type=waving&color=0:0B3C5D,100:1F4E79&height=180&section=header&text=HabitFlow&fontSize=42&fontColor=ffffff&fontAlignY=40)
 
-<h1 align="center">AI Habit Tracker (Playground)</h1>
+## 🧠 HabitFlow
 
-<p align="center">
-  Experimental habit tracking system built with Google AI Studio to explore AI-assisted habit creation, multilingual intent detection, and automatic emoji assignment.
-</p>
-
-<p align="center">
-  <a href="https://ai.studio/apps/a791d63f-46bc-4c53-9b8f-12824ffaf4e9"><b>Live Demo (AI Studio)</b></a>
-  ·
-  <a href="#features">Features</a>
-  ·
-  <a href="#tech-stack">Tech Stack</a>
-  ·
-  <a href="#run-locally">Run Locally</a>
-  ·
-  <a href="#project-structure">Project Structure</a>
-</p>
+🤖 AI-assisted habit tracking system built with **Google AI Studio / Gemini**  
+🌍 Multilingual natural-language habit input  
+🧩 Structured data extraction from free text  
+🎯 Experimental AI integration project  
 
 ---
 
-## Why This Project
+## ⚙️ Tech Stack
 
-This repository is a technical playground built to experiment with:
-
-- Integrating Google AI Studio / Gemini API into a web application  
-- Converting natural language input into structured habit data  
-- Automatic semantic emoji assignment  
-- Language-agnostic habit detection  
-
-> This is an experimental project focused on AI integration patterns rather than a production-ready behavioral optimization system.
+![Node.js](https://img.shields.io/badge/Node.js-1F4E79?style=for-the-badge&logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3730A3?style=for-the-badge&logo=typescript&logoColor=white)
+![Google AI Studio](https://img.shields.io/badge/Google_AI_Studio-334155?style=for-the-badge&logo=google&logoColor=white)
+![Gemini API](https://img.shields.io/badge/Gemini_API-0F766E?style=for-the-badge&logo=google&logoColor=white)
+![Git](https://img.shields.io/badge/Git-92400E?style=for-the-badge&logo=git&logoColor=white)
 
 ---
 
-## Features
+## 📌 Core Features
 
-- **AI-assisted habit generation**  
-  Users can describe habits in natural language and receive structured suggestions.
-
-- **Automatic emoji mapping**  
-  Each generated habit is assigned a contextually relevant emoji.
-
-- **Multilingual input support**  
-  Habits can be written in different languages and still be interpreted correctly.
-
-- **Local development ready**  
-  Runs locally using a Gemini API key.
+### 🔥 AI-Powered Habit Creation
+> Natural language → structured habit entries.  
+> Focus: prompt engineering, structured output, validation logic.
 
 ---
 
-## Tech Stack
-
-- Node.js  
-- (Your framework here — e.g., Next.js / Vite / React)  
-- Google AI Studio / Gemini API  
-- TypeScript (if applicable)
+### 🌍 Multilingual Input Handling
+> Consistent structure regardless of input language.  
+> Focus: semantic interpretation through LLM.
 
 ---
 
-## Live Demo
+### 🧩 Semantic Emoji Assignment
+> Context-aware emoji mapping per habit.  
+> Focus: UI clarity and semantic consistency.
 
-AI Studio app:  
+---
+
+## 🧠 Architecture Overview
+
+HabitFlow separates responsibilities into:
+
+- **UI Layer** – user interaction and rendering  
+- **AI Layer** – Gemini prompt + structured output request  
+- **Parsing Layer** – validation and normalization of AI response  
+- **Domain Layer** – habit representation and logic  
+
+This structure allows AI to be a component, not the system itself.
+
+---
+
+## 🌐 Live Demo
+
 https://ai.studio/apps/a791d63f-46bc-4c53-9b8f-12824ffaf4e9
 
 ---
 
-## Run Locally
+## 🎯 Project Scope
 
-### Prerequisites
+HabitFlow is a technical exploration of:
 
-- Node.js (LTS recommended)
+- AI-assisted structured data generation  
+- Integration patterns for LLMs inside web apps  
+- Clean separation between business logic and AI inference  
 
-### Setup
-
-1. Install dependencies:
-
-```bash
-npm install
+Not intended as a production behavioral optimization platform.
