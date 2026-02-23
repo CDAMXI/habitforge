@@ -1,0 +1,5 @@
+{
+  "name": "HabitFlow AI",
+  "description": "An Apple-inspired habit tracker that uses AI to suggest habits, motivate you, and transform your progress photos into fun achievements.",
+  "requestFramePermissions": ["camera"]
+}
