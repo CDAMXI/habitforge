@@ -1,7 +1,7 @@
 export interface Habit {
   id: number;
   name: string;
-  icon: string;
+  emoji: string;
   color: string;
   frequency: string;
   created_at: string;

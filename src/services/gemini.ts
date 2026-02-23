@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 export async function suggestHabits(goals: string) {
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Based on these goals: "${goals}", suggest 3-5 daily habits. Return them as a JSON array of objects with "name", "icon" (lucide icon name), and "color" (hex).`,
+    contents: `Based on these goals: "${goals}", suggest 3-5 daily habits. Return them as a JSON array of objects with "name", "emoji" (a single relevant emoji), and "color" (hex).`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -14,10 +14,10 @@ export async function suggestHabits(goals: string) {
           type: Type.OBJECT,
           properties: {
             name: { type: Type.STRING },
-            icon: { type: Type.STRING },
+            emoji: { type: Type.STRING },
             color: { type: Type.STRING },
           },
-          required: ["name", "icon", "color"],
+          required: ["name", "emoji", "color"],
         },
       },
     },

@@ -30,6 +30,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
+  const [newHabitEmoji, setNewHabitEmoji] = useState("✨");
   const [aiGoals, setAiGoals] = useState("");
   const [aiSuggesting, setAiSuggesting] = useState(false);
   const [motivation, setMotivation] = useState("");
@@ -85,16 +86,30 @@ export default function App() {
     }
   };
 
-  const addHabit = async (name: string, icon = "Circle", color = "#007AFF") => {
+  const addHabit = async (name: string, emoji = "✨", color = "#007AFF") => {
     try {
+      // If emoji is default, try to get a better one from AI
+      let finalEmoji = emoji;
+      if (emoji === "✨" && name) {
+        try {
+          const suggestions = await suggestHabits(`Pick one emoji for the habit: ${name}`);
+          if (suggestions && suggestions[0]) {
+            finalEmoji = suggestions[0].emoji;
+          }
+        } catch (e) {
+          console.error("Failed to auto-pick emoji", e);
+        }
+      }
+
       await fetch("/api/habits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, icon, color })
+        body: JSON.stringify({ name, emoji: finalEmoji, color })
       });
-      fetchHabits();
+      await fetchHabits();
       setShowAddModal(false);
       setNewHabitName("");
+      setNewHabitEmoji("✨");
     } catch (err) {
       console.error("Failed to add habit", err);
     }
@@ -115,7 +130,7 @@ export default function App() {
     try {
       const suggestions = await suggestHabits(aiGoals);
       for (const s of suggestions) {
-        await addHabit(s.name, s.icon, s.color);
+        await addHabit(s.name, s.emoji, s.color);
       }
       setAiGoals("");
     } catch (err) {
@@ -181,45 +196,6 @@ export default function App() {
         </button>
       </header>
 
-      {/* Progress Card */}
-      <section className="apple-card p-6 mb-8 bg-gradient-to-br from-apple-blue to-blue-600 text-white">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <p className="text-white/70 text-sm font-semibold uppercase tracking-wider">Today's Progress</p>
-            <h2 className="text-4xl font-bold mt-1">
-              {habits.length > 0 ? Math.round((habits.filter(h => h.completedToday).length / habits.length) * 100) : 0}%
-            </h2>
-          </div>
-          <Trophy className="text-white/30" size={48} />
-        </div>
-        <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${habits.length > 0 ? (habits.filter(h => h.completedToday).length / habits.length) * 100 : 0}%` }}
-            className="bg-white h-full"
-          />
-        </div>
-        <p className="mt-4 text-sm text-white/80 font-medium">
-          {habits.filter(h => h.completedToday).length} of {habits.length} habits completed
-        </p>
-      </section>
-
-      {/* Motivation Toast */}
-      <AnimatePresence>
-        {motivation && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="apple-card p-4 mb-6 bg-apple-green text-white flex items-center gap-3 shadow-apple-green/20"
-          >
-            <Sparkles size={20} />
-            <p className="font-medium text-sm flex-1">{motivation}</p>
-            <button onClick={() => setMotivation("")}><X size={16} /></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Habits List */}
       <section className="space-y-4">
         <h3 className="text-xl font-semibold mb-4 px-1">Your Habits</h3>
@@ -238,20 +214,23 @@ export default function App() {
             <button 
               onClick={() => toggleHabit(habit.id)}
               className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300",
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 text-2xl",
                 habit.completedToday 
-                  ? "bg-apple-green text-white shadow-lg shadow-apple-green/20" 
-                  : "bg-apple-bg text-apple-gray"
+                  ? "bg-[#34C759] text-white shadow-lg shadow-green-500/20 scale-105" 
+                  : "bg-[#F2F2F7] grayscale opacity-70"
               )}
             >
-              {habit.completedToday ? <Check size={24} /> : <div className="w-6 h-6 border-2 border-apple-gray/30 rounded-full" />}
+              {habit.completedToday ? <Check size={24} strokeWidth={3} /> : habit.emoji || "✨"}
             </button>
             
             <div className="flex-1">
-              <h4 className={cn("font-semibold transition-all", habit.completedToday && "text-apple-gray line-through opacity-50")}>
-                {habit.name}
-              </h4>
-              <p className="text-xs text-apple-gray font-medium uppercase tracking-tighter">Daily</p>
+              <div className="flex items-center gap-2">
+                {!habit.completedToday && <span className="text-lg">{habit.emoji}</span>}
+                <h4 className={cn("font-bold text-[#1C1C1E] transition-all", habit.completedToday && "text-[#8E8E93] line-through opacity-50")}>
+                  {habit.name}
+                </h4>
+              </div>
+              <p className="text-[10px] text-[#8E8E93] font-bold uppercase tracking-widest mt-0.5">Daily Streak: 1</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -292,30 +271,41 @@ export default function App() {
         ))}
       </section>
 
-      {/* AI Section */}
-      <section className="mt-12">
+      {/* AI Section - Improved Design */}
+      <section className="mt-12 mb-8">
         <div className="flex items-center gap-2 mb-4 px-1">
-          <Sparkles className="text-apple-blue" size={20} />
-          <h3 className="text-xl font-semibold">AI Assistant</h3>
+          <Sparkles className="text-[#007AFF]" size={20} />
+          <h3 className="text-xl font-bold text-[#1C1C1E]">AI Habit Architect</h3>
         </div>
-        <div className="apple-card p-6 bg-white/50 border border-white">
-          <p className="text-sm text-apple-gray font-medium mb-4">
-            Tell me your goals, and I'll suggest a personalized habit routine for you.
-          </p>
-          <div className="flex gap-2">
+        <div className="apple-card p-6 bg-white shadow-xl shadow-blue-500/5 border border-blue-100/50">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+              <Wand2 className="text-[#007AFF]" size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#1C1C1E]">Personalized Routine</p>
+              <p className="text-xs text-[#8E8E93]">Describe your goals to get started.</p>
+            </div>
+          </div>
+          <div className="relative">
             <input 
               type="text" 
-              placeholder="e.g. Get fit and read more"
+              placeholder="e.g. 'I want to be more mindful and healthy'"
               value={aiGoals}
               onChange={(e) => setAiGoals(e.target.value)}
-              className="flex-1 bg-apple-bg border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-apple-blue outline-none"
+              className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 text-sm font-medium focus:ring-2 focus:ring-[#007AFF] outline-none transition-all placeholder:text-[#8E8E93]/50"
             />
             <button 
               onClick={handleAiSuggest}
               disabled={aiSuggesting || !aiGoals}
-              className="bg-apple-blue text-white p-3 rounded-xl disabled:opacity-50 active:scale-95 transition-transform"
+              className="absolute right-2 top-2 bottom-2 bg-[#007AFF] text-white px-4 rounded-xl disabled:opacity-50 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
             >
-              {aiSuggesting ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
+              {aiSuggesting ? <Loader2 className="animate-spin" size={18} /> : (
+                <>
+                  <span className="text-xs font-bold uppercase tracking-widest">Generate</span>
+                  <ChevronRight size={16} />
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -336,28 +326,46 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="apple-card w-full max-w-sm p-6 relative z-10"
+              className="apple-card w-full max-w-sm p-8 relative z-10 bg-white shadow-2xl"
             >
-              <h3 className="text-xl font-bold mb-4">New Habit</h3>
-              <input 
-                autoFocus
-                type="text" 
-                placeholder="Habit name"
-                value={newHabitName}
-                onChange={(e) => setNewHabitName(e.target.value)}
-                className="w-full bg-apple-bg border-none rounded-xl px-4 py-3 mb-6 outline-none focus:ring-2 focus:ring-apple-blue"
-              />
+              <h3 className="text-2xl font-bold mb-6 text-center">New Habit</h3>
+              
+              <div className="flex flex-col gap-4 mb-8">
+                <div>
+                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">Habit Name</label>
+                  <input 
+                    autoFocus
+                    type="text" 
+                    placeholder="e.g. Morning Yoga"
+                    value={newHabitName}
+                    onChange={(e) => setNewHabitName(e.target.value)}
+                    className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] font-medium"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest ml-1 mb-1 block">Emoji Icon</label>
+                  <input 
+                    type="text" 
+                    placeholder="✨"
+                    value={newHabitEmoji}
+                    onChange={(e) => setNewHabitEmoji(e.target.value)}
+                    className="w-full bg-[#F2F2F7] border-none rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#007AFF] text-2xl text-center"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-3 font-semibold text-apple-gray bg-apple-bg rounded-xl"
+                  className="flex-1 py-4 font-bold text-[#8E8E93] bg-[#F2F2F7] rounded-2xl active:scale-95 transition-transform"
                 >
                   Cancel
                 </button>
                 <button 
-                  onClick={() => addHabit(newHabitName)}
+                  onClick={() => addHabit(newHabitName, newHabitEmoji)}
                   disabled={!newHabitName}
-                  className="flex-1 py-3 font-semibold text-white bg-apple-blue rounded-xl disabled:opacity-50"
+                  className="flex-1 py-4 font-bold text-white bg-[#007AFF] rounded-2xl disabled:opacity-50 shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
                 >
                   Create
                 </button>
@@ -423,18 +431,18 @@ export default function App() {
       </AnimatePresence>
 
       {/* Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 apple-blur border-t border-apple-gray/10 px-8 py-4 flex justify-around items-center z-40">
-        <button className="text-apple-blue flex flex-col items-center gap-1">
-          <Calendar size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Today</span>
+      <nav className="fixed bottom-0 left-0 right-0 apple-blur border-t border-[#8E8E93]/10 px-8 pt-4 pb-8 flex justify-around items-center z-40">
+        <button className="text-[#007AFF] flex flex-col items-center gap-1.5">
+          <Calendar size={26} strokeWidth={2.5} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Today</span>
         </button>
-        <button className="text-apple-gray flex flex-col items-center gap-1">
-          <TrendingUp size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Stats</span>
+        <button className="text-[#8E8E93] flex flex-col items-center gap-1.5 opacity-60">
+          <TrendingUp size={26} strokeWidth={2} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Stats</span>
         </button>
-        <button className="text-apple-gray flex flex-col items-center gap-1">
-          <Settings size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Settings</span>
+        <button className="text-[#8E8E93] flex flex-col items-center gap-1.5 opacity-60">
+          <Settings size={26} strokeWidth={2} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Settings</span>
         </button>
       </nav>
     </div>

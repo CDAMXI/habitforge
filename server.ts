@@ -11,16 +11,19 @@ const db = new Database("habits.db");
 
 // Initialize database
 db.exec(`
-  CREATE TABLE IF NOT EXISTS habits (
+  DROP TABLE IF EXISTS completions;
+  DROP TABLE IF EXISTS habits;
+
+  CREATE TABLE habits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    icon TEXT,
+    emoji TEXT,
     color TEXT,
     frequency TEXT DEFAULT 'daily',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
-  CREATE TABLE IF NOT EXISTS completions (
+  CREATE TABLE completions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     habit_id INTEGER,
     completed_at DATE NOT NULL,
@@ -43,8 +46,8 @@ async function startServer() {
   });
 
   app.post("/api/habits", (req, res) => {
-    const { name, icon, color } = req.body;
-    const info = db.prepare("INSERT INTO habits (name, icon, color) VALUES (?, ?, ?)").run(name, icon, color);
+    const { name, emoji, color } = req.body;
+    const info = db.prepare("INSERT INTO habits (name, emoji, color) VALUES (?, ?, ?)").run(name, emoji, color);
     res.json({ id: info.lastInsertRowid });
   });
 
